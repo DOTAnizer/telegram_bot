@@ -1,6 +1,6 @@
 from uuid import uuid4
 
-from telegram import InlineQueryResultArticle, InputTextMessageContent, ParseMode
+from telegram import InlineQueryResultArticle, InputTextMessageContent, ParseMode, InlineQueryResultGif
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, InlineQueryHandler
 
 import logging
@@ -21,7 +21,13 @@ def help(bot, update):
 
 
 def echo(bot, update):
-	update.message.reply_text(update.message.text)
+	new_message = "Fake: %s" % update.message.text
+	if update.message.chat.type == "group":
+		# Inline conversation
+		pass
+	if update.message.chat.type == "private":
+		# Message sent to bot in direct
+		update.message.reply_text(new_message)
 
 
 def error(bot, update, error):
@@ -36,14 +42,26 @@ def inlinequery(bot, update):
 	query2 = "Deep fake text 2"
 	query3 = "Deep fake text 3"
 
+	size = 20
+
 	results = [
+
+		# InlineQueryResultGif(
+		# 	id=uuid4(),
+		# 	#thumb_url = "https://thumbs.gfycat.com/BlaringUnrealisticHorsechestnutleafminer-size_restricted.gif",
+		# 	gif_url = "https://thumbs.gfycat.com/BlaringUnrealisticHorsechestnutleafminer-size_restricted.gif",
+		# 	input_message_content=InputTextMessageContent("Test")
+		# ),
 		InlineQueryResultArticle(
 			id=uuid4(),
 			title=query1,
 			input_message_content=InputTextMessageContent(
-				query1.upper())),
+				query1)),
 		InlineQueryResultArticle(
 			id=uuid4(),
+			thumb_heigth = size,
+			thumb_width = size,
+			thumb_url = "https://www.dropbox.com/s/mvnurxd1imk13bq/dota-2-logo-C88DABB066-seeklogo.com.png?dl=1",
 			title=query2,
 			input_message_content=InputTextMessageContent(
 				"*{}*".format(escape_markdown(query2)),
@@ -70,7 +88,7 @@ def main():
 	dp.add_handler(CommandHandler("help", help))
 
 	# on noncommand i.e message - echo the message on Telegram
-	# dp.add_handler(MessageHandler(Filters.text, echo))
+	dp.add_handler(MessageHandler(Filters.text, echo))
 
 	# on noncommand i.e message - echo the message on Telegram
 	dp.add_handler(InlineQueryHandler(inlinequery))
