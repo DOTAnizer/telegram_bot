@@ -181,6 +181,16 @@ def echo(bot, update, chat_data = None):
 def error(bot, update, error):
 	logging.warning('Update "%s" caused error "%s"', update, error)
 
+
+# Выводим примеры
+ods_title_start = "Примерчики из OpenDataScience"
+ods_description_start = "Отправит в чат фразу из ODS"
+
+dota_title_start = "Приемр из Дотки"
+dota_description_start = "Отправит в чат фразу из дотки"
+
+
+# Когда пользователь начал вводить
 ods_id = uuid4()
 ods_title = "ODS"
 ods_description = "Сделай мне аля OpenDataScience"
@@ -206,30 +216,50 @@ def inlinequery(bot, update):
 	if update.message:
 		chat_id = update.message.chat_id
 		bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
-
-	results = [
-
-		InlineQueryResultArticle(
-			id=uuid4(),
-			title=ods_title,
-			description=ods_description,
-			input_message_content=InputTextMessageContent(
-				answer(query, type="ods", hard_cutoff = 2), parse_mode=ParseMode.MARKDOWN),
-			thumb_url=ods_thumb,
-		),
-		InlineQueryResultArticle(
-			id=uuid4(),
-			title=dota_title,
-			description=dota_description,
-			input_message_content=InputTextMessageContent(
-				answer(query, type="dota", hard_cutoff = 2), parse_mode=ParseMode.MARKDOWN),
-			thumb_url=dota_thumb,
-		),
-
-	]
+	
+	if query.strip():
+		results = [
+			InlineQueryResultArticle(
+				id=uuid4(),
+				title=ods_title,
+				description=ods_description,
+				input_message_content=InputTextMessageContent(
+					answer(query, type="ods", hard_cutoff = 1), parse_mode=ParseMode.MARKDOWN),
+				thumb_url=ods_thumb,
+			),
+			InlineQueryResultArticle(
+				id=uuid4(),
+				title=dota_title,
+				description=dota_description,
+				input_message_content=InputTextMessageContent(
+					answer(query, type="dota", hard_cutoff = 1), parse_mode=ParseMode.MARKDOWN),
+				thumb_url=dota_thumb,
+			),
+	
+		]
+	else:
+		results = [
+			InlineQueryResultArticle(
+				id=uuid4(),
+				title=ods_title_start,
+				description=ods_description_start,
+				input_message_content=InputTextMessageContent(
+					next(gen_ods_db), parse_mode=ParseMode.MARKDOWN),
+				thumb_url=ods_thumb,
+			),
+			InlineQueryResultArticle(
+				id=uuid4(),
+				title=dota_title_start,
+				description=dota_description_start,
+				input_message_content=InputTextMessageContent(
+					next(gen_dota_db), parse_mode=ParseMode.MARKDOWN),
+				thumb_url=dota_thumb,
+			),
+	
+		]
 	update.inline_query.answer(results
 	                           #, is_personal=True
-	                           #, cache_time=300
+	                           , cache_time=0
 	                           , switch_pm_text="Потестить в директе у бота"
 	                           , switch_pm_parameter="test"
 	)
