@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import uuid
 
 import requests
@@ -13,6 +11,7 @@ import environ
 
 from telegram.ext.dispatcher import run_async
 
+
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
@@ -22,8 +21,6 @@ import json
 
 from telegram.utils.helpers import escape_markdown
 
-from itertools import cycle
-
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 base_url = 'http://5.153.56.86:5000'
@@ -31,7 +28,7 @@ base_url = 'http://5.153.56.86:5000'
 hard_cutoff_placeholder = "Наша моделька не успела за 1 секунду, отправлять нечего"
 
 dota_db = [
-	# "Dota Prase test1",
+	#"Dota Prase test1",
 	"чв найс плеите долбаебы у вас в голове члены походу",
 	"репорт шторму завали ебло мусор )",
 	"они думиаю что шторм ебет ам",
@@ -41,23 +38,24 @@ dota_db = [
 
 one_best_model = False
 
+from itertools import cycle
 gen_dota_db = cycle(dota_db)
 
+
 ods_db = [
-	# "ODs Prase test1",
+	#"ODs Prase test1",
 	"сделай репорт по квартальному отчету",
 	"так ты оверфит",
-	# "так ты анскил блять не ной ок",
+	#"так ты анскил блять не ной ок",
 ]
 
 gen_ods_db = cycle(ods_db)
 
-
-# @timeout_decorator.timeout(5, use_signals=False)
+#@timeout_decorator.timeout(5, use_signals=False)
 def fetch_answer(text, direction_to):
 	url = base_url
 
-	post_fields = {'msg': text}  # Set POST fields here
+	post_fields = {'msg': text}     # Set POST fields here
 
 	try:
 		request = Request(url, urlencode(post_fields).encode())
@@ -66,13 +64,11 @@ def fetch_answer(text, direction_to):
 		pass
 	return text
 
-
 from requests_futures.sessions import FuturesSession
 
 session = FuturesSession(max_workers=10)
 
-
-def fetch_answer_async(text, direction_to, send_notification=None, hard_cutoff=None):
+def fetch_answer_async(text, direction_to, send_notification = None, hard_cutoff = None):
 	url = base_url
 	#
 	post_fields = {'msg': text}  # Set POST fields here
@@ -89,9 +85,9 @@ def fetch_answer_async(text, direction_to, send_notification=None, hard_cutoff=N
 			try:
 				result = result.result()
 				result.raise_for_status()
-				text = json.loads(result.content).get(direction_to)
+				text = json.loads(result.content.decode()).get(direction_to)
 				if direction_to == "debug":
-					text = json.dumps(json.loads(result.content), indent=4, ensure_ascii=False).encode('utf8')
+					text = json.dumps(json.loads(result.content.decode()), indent=4, ensure_ascii=False).encode('utf8')
 			except requests.exceptions.ConnectionError as err:
 				text = "Проблемы с подключением: %s" % err
 			except requests.exceptions.HTTPError:
@@ -104,7 +100,6 @@ def fetch_answer_async(text, direction_to, send_notification=None, hard_cutoff=N
 		time.sleep(0.5)
 		count = count + 0.5
 	return text
-
 
 # async def fetch(session, url, data):
 # 	async with async_timeout.timeout(10):
@@ -159,13 +154,13 @@ def help(bot, update):
 	1. С помощью команд /dota, /ods после которых идет текст для преобрзования.
 	2. Инлайновый режим. Бота можно добавть в группу и обратиться по названию %s и продолжить печатать текст, выбрав в выпадающем меню необходимый стиль.
 	В этом случае бот сам отправит стилизованный текст от вашего имени.
-	""" % (escape_markdown(bot_name), escape_markdown(bot_name))
+	""" % (escape_markdown(bot_name),escape_markdown(bot_name))
 	bot.send_message(chat_id=update.message.chat_id, parse_mode=ParseMode.MARKDOWN, text=text)
 
 
 @run_async
 def dota(bot, update):
-	# update.message.reply_text('Dota!')
+	#update.message.reply_text('Dota!')
 
 	chat_id = update.message.chat_id
 
@@ -173,40 +168,39 @@ def dota(bot, update):
 		bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
 
 	command = detect_command(update.message.text)
-	data = json.loads(answer(command.get("text"), type="debug"))
+	data = json.loads(answer(command.get("text"), type="debug").decode())
 	if one_best_model:
 		bot.send_message(chat_id=update.message.chat_id, text=data.get("dota"), send_notification=send_notification)
 	else:
 		bot.send_message(chat_id=update.message.chat_id, text=data.get("dota"), send_notification=send_notification)
 		bot.send_message(chat_id=update.message.chat_id, text=data.get("orig_ods"), send_notification=send_notification)
-
 
 @run_async
 def ods(bot, update):
+
 	chat_id = update.message.chat_id
 
 	def send_notification():
 		bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
 
 	command = detect_command(update.message.text)
-	data = json.loads(answer(command.get("text"), type="debug"))
+	data = json.loads(answer(command.get("text"), type="debug").decode())
 	if one_best_model:
 		bot.send_message(chat_id=update.message.chat_id, text=data.get("dota"), send_notification=send_notification)
 	else:
 		bot.send_message(chat_id=update.message.chat_id, text=data.get("dota"), send_notification=send_notification)
 		bot.send_message(chat_id=update.message.chat_id, text=data.get("orig_ods"), send_notification=send_notification)
 
-
 @run_async
 def debug(bot, update):
+
 	chat_id = update.message.chat_id
 
 	def send_notification():
 		bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
 
 	command = detect_command(update.message.text)
-	bot.send_message(chat_id=update.message.chat_id,
-	                 text=answer(command.get("text"), type=command.get("type"), send_notification=send_notification))
+	bot.send_message(chat_id=update.message.chat_id, text=answer(command.get("text"), type=command.get("type"), send_notification=send_notification))
 
 
 import time
@@ -214,28 +208,25 @@ import time
 # Defaults
 bot_name = "@ods_deeptest_bot"
 
-
-def answer(text, type="dota", send_notification=None, hard_cutoff=None):
+def answer(text, type = "dota", send_notification = None, hard_cutoff = None):
 	new_text = text
 	if not text.strip():
 		return "Введите текст в формате: `%s и затем через пробел текст для стилизации`" % bot_name
 	try:
-		# new_text = "Fake ods: %s" % ''.join(reversed(text))
+		#new_text = "Fake ods: %s" % ''.join(reversed(text))
 		new_text = fetch_answer_async(text, type, send_notification=send_notification, hard_cutoff=hard_cutoff)
 	except timeout_decorator.timeout_decorator.TimeoutError:
 		new_text = "Произошла ошибка, что-то пошло не так"
 	return new_text
 
-
 @run_async
-def echo(bot, update, chat_data=None):
-	# new_message = "Fake: %s" % update.message.text
-	# time.sleep(30)
+def echo(bot, update, chat_data = None):
+	#new_message = "Fake: %s" % update.message.text
+	#time.sleep(30)
 	chat_id = update.message.chat_id
 
 	def send_notification():
 		bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
-
 	if update.message.text.startswith(bot_name):
 		bot.send_message(chat_id=chat_id, text=answer(update.message.text, send_notification=send_notification))
 	else:
@@ -245,7 +236,6 @@ def echo(bot, update, chat_data=None):
 		if update.message.chat.type == "private":
 			# Message sent to bot in direct
 			update.message.reply_text(answer(update.message.text, send_notification=send_notification))
-
 
 @run_async
 def error(bot, update, error):
@@ -261,6 +251,7 @@ dota_id = uuid.uuid4()
 dota_title_start = "Приемр из Дотки"
 dota_description_start = "Отправит в чат фразу из дотки"
 
+
 # Когда пользователь ввел и ему показывает резульата
 ods_title = "Запостить в стиле ODS"
 ods_description = "Сделай мне аля OpenDataScience"
@@ -268,7 +259,7 @@ ods_thumb = "https://www.dropbox.com/s/o2bkq6l9psqxyeu/1741547_1.jpg?dl=1"
 
 dota_title = "Отправить как в Dotе"
 dota_description = "Дотифицируй это"
-dota_thumb = "https://www.dropbox.com/s/5kf7behafeqzu4f/CBQg2NA.jpg?dl=1"
+dota_thumb="https://www.dropbox.com/s/5kf7behafeqzu4f/CBQg2NA.jpg?dl=1"
 
 # Set by BotFather by /setcommands
 commands_list = """
@@ -277,13 +268,11 @@ dota - dota_description sdf
 ods - ods_description sdf
 """
 
-
 def fetch_both(query):
 	hard_cutoff = 1
 	text = answer(query, type="debug", hard_cutoff=hard_cutoff)
-	data = json.loads(text)
+	data = json.loads(text.decode())
 	return [data.get("ods"), data.get("dota")]
-
 
 @run_async
 def inlinequery(bot, update):
@@ -293,11 +282,11 @@ def inlinequery(bot, update):
 	if update.message:
 		chat_id = update.message.chat_id
 		bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
-
+	
 	if query.strip():
 		ods, dota = fetch_both(query)
-		# ods = answer(query, type="ods", hard_cutoff = 1)
-		# dota = answer(query, type="dota", hard_cutoff = 1)
+		#ods = answer(query, type="ods", hard_cutoff = 1)
+		#dota = answer(query, type="dota", hard_cutoff = 1)
 		results = [
 			InlineQueryResultArticle(
 				id=uuid.uuid4(),
@@ -315,7 +304,7 @@ def inlinequery(bot, update):
 					"):" if not dota else dota, parse_mode=ParseMode.MARKDOWN),
 				thumb_url=dota_thumb,
 			),
-
+	
 		]
 	else:
 		results = [
@@ -333,14 +322,14 @@ def inlinequery(bot, update):
 				input_message_content=InputTextMessageContent(next(gen_dota_db), parse_mode=ParseMode.MARKDOWN),
 				thumb_url=dota_thumb,
 			),
-
+	
 		]
 	update.inline_query.answer(results
-	                           # , cache_time=1
-	                           # , is_personal=True
-	                           , switch_pm_text="Потестить в директе у бота"
-	                           , switch_pm_parameter="test"
-	                           )
+       #, cache_time=1
+       #, is_personal=True
+       , switch_pm_text="Потестить в директе у бота"
+       , switch_pm_parameter="test"
+	)
 
 
 def main():
@@ -355,10 +344,11 @@ def main():
 	dp.add_handler(CommandHandler("help", help))
 	dp.add_handler(CommandHandler("dota", dota))
 	dp.add_handler(CommandHandler("ods", ods))
-	# dp.add_handler(StringCommandHandler("dota", dota))
-	# dp.add_handler(StringCommandHandler("ods", ods))
+	#dp.add_handler(StringCommandHandler("dota", dota))
+	#dp.add_handler(StringCommandHandler("ods", ods))
 
 	dp.add_handler(CommandHandler("debug", debug))
+
 
 	# on noncommand i.e message - echo the message on Telegram
 	dp.add_handler(MessageHandler(Filters.text | Filters.entity("MENTION"), echo, pass_chat_data=True))
@@ -368,6 +358,7 @@ def main():
 
 	# log all errors
 	dp.add_error_handler(error)
+
 
 	if not "state" == "async":
 		# Start the Bot
