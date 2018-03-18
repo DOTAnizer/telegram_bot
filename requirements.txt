@@ -1,2 +1,12 @@
 django-environ
 python-telegram-bot
+timeout-decorator
+
+async_timeout
+aiohttp
+asyncio
+
+# Speedup
+ujson
+
+requests_futures
