@@ -1,4 +1,4 @@
-from uuid import uuid4
+import uuid
 
 import aiohttp
 import async_timeout
@@ -183,21 +183,21 @@ def error(bot, update, error):
 
 
 # Выводим примеры
+ods_id = uuid.uuid4()
 ods_title_start = "Примерчики из OpenDataScience"
 ods_description_start = "Отправит в чат фразу из ODS"
 
+dota_id = uuid.uuid4()
 dota_title_start = "Приемр из Дотки"
 dota_description_start = "Отправит в чат фразу из дотки"
 
 
-# Когда пользователь начал вводить
-ods_id = uuid4()
-ods_title = "ODS"
+# Когда пользователь ввел и ему показывает резульата
+ods_title = "Запостить в стиле ODS"
 ods_description = "Сделай мне аля OpenDataScience"
 ods_thumb = "https://www.dropbox.com/s/o2bkq6l9psqxyeu/1741547_1.jpg?dl=1"
 
-dota_id = uuid4()
-dota_title = "Dota"
+dota_title = "Отправить как в Dotе"
 dota_description = "Дотифицируй это"
 dota_thumb="https://www.dropbox.com/s/5kf7behafeqzu4f/CBQg2NA.jpg?dl=1"
 
@@ -218,21 +218,23 @@ def inlinequery(bot, update):
 		bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
 	
 	if query.strip():
+		ods = answer(query, type="ods", hard_cutoff = 1)
+		dota = answer(query, type="dota", hard_cutoff = 1)
 		results = [
 			InlineQueryResultArticle(
-				id=uuid4(),
+				id=uuid.uuid4(),
 				title=ods_title,
-				description=ods_description,
+				description="Будет вот так начинаться: %s" % ods[20:],
 				input_message_content=InputTextMessageContent(
-					answer(query, type="ods", hard_cutoff = 1), parse_mode=ParseMode.MARKDOWN),
+					ods, parse_mode=ParseMode.MARKDOWN),
 				thumb_url=ods_thumb,
 			),
 			InlineQueryResultArticle(
-				id=uuid4(),
+				id=uuid.uuid4(),
 				title=dota_title,
-				description=dota_description,
+				description="Будет начинаться так: %s" % dota[20:],
 				input_message_content=InputTextMessageContent(
-					answer(query, type="dota", hard_cutoff = 1), parse_mode=ParseMode.MARKDOWN),
+					dota, parse_mode=ParseMode.MARKDOWN),
 				thumb_url=dota_thumb,
 			),
 	
@@ -240,7 +242,7 @@ def inlinequery(bot, update):
 	else:
 		results = [
 			InlineQueryResultArticle(
-				id=uuid4(),
+				id=ods_id,
 				title=ods_title_start,
 				description=ods_description_start,
 				input_message_content=InputTextMessageContent(
@@ -248,7 +250,7 @@ def inlinequery(bot, update):
 				thumb_url=ods_thumb,
 			),
 			InlineQueryResultArticle(
-				id=uuid4(),
+				id=dota_id,
 				title=dota_title_start,
 				description=dota_description_start,
 				input_message_content=InputTextMessageContent(
@@ -258,7 +260,6 @@ def inlinequery(bot, update):
 	
 		]
 	update.inline_query.answer(results
-	                           #, is_personal=True
 	                           , cache_time=0
 	                           , switch_pm_text="Потестить в директе у бота"
 	                           , switch_pm_parameter="test"
