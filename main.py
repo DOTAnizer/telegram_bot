@@ -85,9 +85,9 @@ def fetch_answer_async(text, direction_to, send_notification = None, hard_cutoff
 			try:
 				result = result.result()
 				result.raise_for_status()
-				text = json.loads(result.content).get(direction_to)
+				text = json.loads(result.content.decode()).get(direction_to)
 				if direction_to == "debug":
-					text = json.dumps(json.loads(result.content), indent=4, ensure_ascii=False).encode('utf8')
+					text = json.dumps(json.loads(result.content.decode()), indent=4, ensure_ascii=False).encode('utf8')
 			except requests.exceptions.ConnectionError as err:
 				text = "Проблемы с подключением: %s" % err
 			except requests.exceptions.HTTPError:
@@ -168,7 +168,7 @@ def dota(bot, update):
 		bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
 
 	command = detect_command(update.message.text)
-	data = json.loads(answer(command.get("text"), type="debug"))
+	data = json.loads(answer(command.get("text"), type="debug").decode())
 	if one_best_model:
 		bot.send_message(chat_id=update.message.chat_id, text=data.get("dota"), send_notification=send_notification)
 	else:
@@ -184,7 +184,7 @@ def ods(bot, update):
 		bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
 
 	command = detect_command(update.message.text)
-	data = json.loads(answer(command.get("text"), type="debug"))
+	data = json.loads(answer(command.get("text"), type="debug").decode())
 	if one_best_model:
 		bot.send_message(chat_id=update.message.chat_id, text=data.get("dota"), send_notification=send_notification)
 	else:
@@ -271,7 +271,7 @@ ods - ods_description sdf
 def fetch_both(query):
 	hard_cutoff = 1
 	text = answer(query, type="debug", hard_cutoff=hard_cutoff)
-	data = json.loads(text)
+	data = json.loads(text.decode())
 	return [data.get("ods"), data.get("dota")]
 
 @run_async
