@@ -2,6 +2,8 @@ import uuid
 
 import aiohttp
 import async_timeout
+import requests
+
 from telegram import InlineQueryResultArticle, InputTextMessageContent, ParseMode, ChatAction
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, InlineQueryHandler, StringCommandHandler
 
@@ -23,9 +25,15 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 
 base_url = 'http://5.153.56.86:5000'
 
+hard_cutoff_placeholder = "Наша моделька не успела за 1 секунду, отправлять нечего"
+
 dota_db = [
-	"Dota Prase test1",
-	"Dota Phrase 123123",
+	#"Dota Prase test1",
+	"чв найс плеите долбаебы у вас в голове члены походу",
+	"репорт шторму завали ебло мусор )",
+	"они думиаю что шторм ебет ам",
+	"тебе же написали сосо просто против вас шейкре",
+	"го пуф по фасту",
 ]
 
 from itertools import cycle
@@ -33,8 +41,10 @@ gen_dota_db = cycle(dota_db)
 
 
 ods_db = [
-	"ODs Prase test1",
-	"ODs Phrase 123123",
+	#"ODs Prase test1",
+	"сделай репорт по квартальному отчету",
+	"так ты оверфит",
+	#"так ты анскил блять не ной ок",
 ]
 
 gen_ods_db = cycle(ods_db)
@@ -65,12 +75,21 @@ def fetch_answer_async(text, direction_to, send_notification = None, hard_cutoff
 	while count < 10:
 		if (hard_cutoff is not None) and (count > hard_cutoff):
 			if direction_to == "dota":
-				text = next(gen_dota_db)
+				text = None
 			if direction_to == "ods":
-				text = next(gen_ods_db)
+				text = None
 			break
 		if result._state == 'FINISHED':
-			text = json.loads(result.result().content).get(direction_to)
+			try:
+				result = result.result()
+				result.raise_for_status()
+				text = json.loads(result.content).get(direction_to)
+				if direction_to == "debug":
+					text = json.dumps(json.loads(result.content), indent=4, ensure_ascii=False).encode('utf8')
+			except requests.exceptions.ConnectionError as err:
+				text = "Проблемы с подключением: %s" % err
+			except requests.exceptions.HTTPError:
+				text = "Проблемы с бэком"
 			break
 		else:
 			if send_notification:
@@ -113,15 +132,24 @@ def detect_command(text):
 		type = "ods"
 		string = text.replace("/ods%s" % bot_name, '').replace("/ods", '')
 
+	if text.startswith("/debug") or text.startswith("/debug%s" % bot_name):
+		type = "debug"
+		string = text.replace("/debug%s" % bot_name, '').replace("/debug", '')
+
 	return {"type": type, "text": string}
 
+
+@run_async
 def start(bot, update):
 	bot.send_message(chat_id=update.message.chat_id, text="I'm a bot, please talk to me!")
 
 
+@run_async
 def help(bot, update):
 	update.message.reply_text('Help!')
 
+
+@run_async
 def dota(bot, update):
 	#update.message.reply_text('Dota!')
 
@@ -133,6 +161,7 @@ def dota(bot, update):
 	command = detect_command(update.message.text)
 	bot.send_message(chat_id=update.message.chat_id, text=answer(command.get("text"), type=command.get("type"), send_notification=send_notification))
 
+@run_async
 def ods(bot, update):
 
 	chat_id = update.message.chat_id
@@ -142,6 +171,18 @@ def ods(bot, update):
 
 	command = detect_command(update.message.text)
 	bot.send_message(chat_id=update.message.chat_id, text=answer(command.get("text"), type=command.get("type"), send_notification=send_notification))
+
+@run_async
+def debug(bot, update):
+
+	chat_id = update.message.chat_id
+
+	def send_notification():
+		bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
+
+	command = detect_command(update.message.text)
+	bot.send_message(chat_id=update.message.chat_id, text=answer(command.get("text"), type=command.get("type"), send_notification=send_notification))
+
 
 import time
 
@@ -177,7 +218,7 @@ def echo(bot, update, chat_data = None):
 			# Message sent to bot in direct
 			update.message.reply_text(answer(update.message.text, send_notification=send_notification))
 
-
+@run_async
 def error(bot, update, error):
 	logging.warning('Update "%s" caused error "%s"', update, error)
 
@@ -208,6 +249,12 @@ dota - dota_description sdf
 ods - ods_description sdf
 """
 
+def fetch_both(query):
+	hard_cutoff = 1
+	text = answer(query, type="debug", hard_cutoff=hard_cutoff)
+	data = json.loads(text)
+	return [data.get("ods"), data.get("dota")]
+
 @run_async
 def inlinequery(bot, update):
 	"""Handle the inline query."""
@@ -218,23 +265,24 @@ def inlinequery(bot, update):
 		bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
 	
 	if query.strip():
-		ods = answer(query, type="ods", hard_cutoff = 1)
-		dota = answer(query, type="dota", hard_cutoff = 1)
+		ods, dota = fetch_both(query)
+		#ods = answer(query, type="ods", hard_cutoff = 1)
+		#dota = answer(query, type="dota", hard_cutoff = 1)
 		results = [
 			InlineQueryResultArticle(
 				id=uuid.uuid4(),
 				title=ods_title,
-				description="Будет вот так начинаться: %s" % ods[20:],
+				description="Будет вот так начинаться: %s..." % ods[0:20] if ods else hard_cutoff_placeholder,
 				input_message_content=InputTextMessageContent(
-					ods, parse_mode=ParseMode.MARKDOWN),
+					"):" if not ods else ods, parse_mode=ParseMode.MARKDOWN),
 				thumb_url=ods_thumb,
 			),
 			InlineQueryResultArticle(
 				id=uuid.uuid4(),
 				title=dota_title,
-				description="Будет начинаться так: %s" % dota[20:],
+				description="Будет начинаться так: %s..." % dota[0:20] if dota else hard_cutoff_placeholder,
 				input_message_content=InputTextMessageContent(
-					dota, parse_mode=ParseMode.MARKDOWN),
+					"):" if not dota else dota, parse_mode=ParseMode.MARKDOWN),
 				thumb_url=dota_thumb,
 			),
 	
@@ -242,33 +290,32 @@ def inlinequery(bot, update):
 	else:
 		results = [
 			InlineQueryResultArticle(
-				id=ods_id,
+				id=uuid.uuid4(),
 				title=ods_title_start,
 				description=ods_description_start,
-				input_message_content=InputTextMessageContent(
-					next(gen_ods_db), parse_mode=ParseMode.MARKDOWN),
+				input_message_content=InputTextMessageContent(next(gen_ods_db), parse_mode=ParseMode.MARKDOWN),
 				thumb_url=ods_thumb,
 			),
 			InlineQueryResultArticle(
-				id=dota_id,
+				id=uuid.uuid4(),
 				title=dota_title_start,
 				description=dota_description_start,
-				input_message_content=InputTextMessageContent(
-					next(gen_dota_db), parse_mode=ParseMode.MARKDOWN),
+				input_message_content=InputTextMessageContent(next(gen_dota_db), parse_mode=ParseMode.MARKDOWN),
 				thumb_url=dota_thumb,
 			),
 	
 		]
 	update.inline_query.answer(results
-	                           , cache_time=0
-	                           , switch_pm_text="Потестить в директе у бота"
-	                           , switch_pm_parameter="test"
+       #, cache_time=1
+       #, is_personal=True
+       , switch_pm_text="Потестить в директе у бота"
+       , switch_pm_parameter="test"
 	)
 
 
 def main():
 	env = environ.Env(BOT_TOKEN=(str, ""), )
-	updater = Updater(env("BOT_TOKEN"), workers=10)
+	updater = Updater(env("BOT_TOKEN"), workers=32)
 
 	# Get the dispatcher to register handlers
 	dp = updater.dispatcher
@@ -280,6 +327,9 @@ def main():
 	dp.add_handler(CommandHandler("ods", ods))
 	#dp.add_handler(StringCommandHandler("dota", dota))
 	#dp.add_handler(StringCommandHandler("ods", ods))
+
+	dp.add_handler(CommandHandler("debug", debug))
+
 
 	# on noncommand i.e message - echo the message on Telegram
 	dp.add_handler(MessageHandler(Filters.text | Filters.entity("MENTION"), echo, pass_chat_data=True))
