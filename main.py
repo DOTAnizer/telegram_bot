@@ -1,7 +1,5 @@
 import uuid
 
-import aiohttp
-import async_timeout
 import requests
 
 from telegram import InlineQueryResultArticle, InputTextMessageContent, ParseMode, ChatAction
@@ -370,10 +368,6 @@ def main():
 		# SIGTERM or SIGABRT. This should be used most of the time, since
 		# start_polling() is non-blocking and will stop the bot gracefully.
 		updater.idle()
-	else:
-		loop = aiohttp.asyncio.new_event_loop()
-		aiohttp.asyncio.set_event_loop(loop)
-		loop.run_until_complete(updater)
 
 
 if __name__ == '__main__':
