@@ -21,6 +21,8 @@ import timeout_decorator
 
 import json
 
+from telegram.utils.helpers import escape_markdown
+
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 base_url = 'http://5.153.56.86:5000'
@@ -35,6 +37,8 @@ dota_db = [
 	"тебе же написали сосо просто против вас шейкре",
 	"го пуф по фасту",
 ]
+
+one_best_model = False
 
 from itertools import cycle
 gen_dota_db = cycle(dota_db)
@@ -146,7 +150,14 @@ def start(bot, update):
 
 @run_async
 def help(bot, update):
-	update.message.reply_text('Help!')
+	text = """%s предназначен для стилизации текста.
+	На данный момент поддерживаются два режима работы:
+	
+	1. С помощью команд /dota, /ods после которых идет текст для преобрзования.
+	2. Инлайновый режим. Бота можно добавть в группу и обратиться по названию %s и продолжить печатать текст, выбрав в выпадающем меню необходимый стиль.
+	В этом случае бот сам отправит стилизованный текст от вашего имени.
+	""" % (escape_markdown(bot_name),escape_markdown(bot_name))
+	bot.send_message(chat_id=update.message.chat_id, parse_mode=ParseMode.MARKDOWN, text=text)
 
 
 @run_async
@@ -159,7 +170,12 @@ def dota(bot, update):
 		bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
 
 	command = detect_command(update.message.text)
-	bot.send_message(chat_id=update.message.chat_id, text=answer(command.get("text"), type=command.get("type"), send_notification=send_notification))
+	data = json.loads(answer(command.get("text"), type="debug"))
+	if one_best_model:
+		bot.send_message(chat_id=update.message.chat_id, text=data.get("dota"), send_notification=send_notification)
+	else:
+		bot.send_message(chat_id=update.message.chat_id, text=data.get("dota"), send_notification=send_notification)
+		bot.send_message(chat_id=update.message.chat_id, text=data.get("orig_ods"), send_notification=send_notification)
 
 @run_async
 def ods(bot, update):
@@ -170,7 +186,12 @@ def ods(bot, update):
 		bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
 
 	command = detect_command(update.message.text)
-	bot.send_message(chat_id=update.message.chat_id, text=answer(command.get("text"), type=command.get("type"), send_notification=send_notification))
+	data = json.loads(answer(command.get("text"), type="debug"))
+	if one_best_model:
+		bot.send_message(chat_id=update.message.chat_id, text=data.get("dota"), send_notification=send_notification)
+	else:
+		bot.send_message(chat_id=update.message.chat_id, text=data.get("dota"), send_notification=send_notification)
+		bot.send_message(chat_id=update.message.chat_id, text=data.get("orig_ods"), send_notification=send_notification)
 
 @run_async
 def debug(bot, update):
